@@ -100,6 +100,21 @@
         opacity: 0.7;
       }
 
+      /* Pause Button Specific Styles */
+      #btn-pause {
+        padding: 0.5rem 1.5rem;
+        font-size: 1rem;
+        margin-top: 40px;
+        background-color: #333; /* Darker background to distinguish from main actions */
+        box-shadow: 0 3px 0 #111;
+        z-index: 50;
+      }
+
+      #btn-pause:active {
+        transform: translateY(3px);
+        box-shadow: 0 0 0 #111;
+      }
+
       /* --- Hand Selection UI --- */
       .card-selection-grid {
         display: grid;
@@ -182,13 +197,10 @@
         flex: 1; /* Takes remaining height */
         position: relative;
         width: 100%;
-        /* Using bg_2.png with auto 100% size to fit height */
         background-image: url("bg_2.png");
         background-repeat: repeat-x;
         background-size: auto 100%;
         background-position: center;
-
-        /* Animation applied here now */
         animation: scroll 10s linear infinite;
       }
 
@@ -200,12 +212,9 @@
         background-image: url("bg_3.png");
         background-size: auto 100%; /* Fit height, repeat width */
         background-repeat: repeat-x;
-
         border-top: 4px solid #1a1a2e; /* Separation line */
         position: relative;
         z-index: 5;
-
-        /* No movement for the road itself */
         display: flex;
         justify-content: center;
         align-items: center;
@@ -216,7 +225,6 @@
         width: 300px;
         height: 35px;
         background-color: white;
-        /* Flexbox in parent handles centering, or we can force it just in case */
         position: absolute;
         top: 50%;
         left: 50%;
@@ -224,7 +232,7 @@
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
       }
 
-      /* UPDATED: Scroll Direction Reversed */
+      /* Scroll Direction Reversed */
       @keyframes scroll {
         from {
           background-position: 100% 0;
@@ -236,18 +244,32 @@
 
       .entity {
         position: absolute;
-        bottom: 35px; /* Stand on the ground segment (50px - offset) */
+        bottom: 40px; /* Stand on the ground segment (50px - offset) */
         font-size: 4rem;
         transition: transform 0.3s, left 0.5s;
         filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.5));
         z-index: 10; /* Above ground */
       }
 
-      /* Hero mirrored to run right */
+      /* UPDATED: Hero Image Styles */
       #hero {
         left: 20%;
-        transform: scaleX(-1);
+        /* REMOVED MIRRORING: transform: scaleX(-1); */
+
+        /* Image handling */
+        width: 150px;
+        height: 150px;
+        /* Default to Stance (hero_2.png) */
+        background-image: url("hero_2.png");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center bottom;
+
+        /* Remove text properties */
+        font-size: 0;
+        color: transparent;
       }
+
       #enemy {
         right: -30%;
         transform: scaleX(-1);
@@ -319,7 +341,6 @@
       /* Bottom Half: Memory Board */
       #memory-layer {
         flex: 6; /* 60% height */
-        /* Background Image bg_1 with fallback */
         background-color: #222;
         background-image: url("bg_1.png");
         background-size: cover;
@@ -340,7 +361,7 @@
         margin-bottom: 10px;
         border-radius: 5px;
         overflow: hidden;
-        display: none; /* Hidden when not in combat */
+        visibility: hidden;
         flex-shrink: 0;
       }
 
@@ -431,7 +452,6 @@
       }
 
       .card-front {
-        /* Card front background card_2 with Blue fallback */
         background-color: #87ceeb; /* Fallback Blue */
         background-image: url("card_2.png");
         background-size: cover;
@@ -550,7 +570,7 @@
             </div>
           </div>
 
-          <div id="hero" class="entity">🏃</div>
+          <div id="hero" class="entity"></div>
           <div id="enemy" class="entity">👹</div>
 
           <div id="phase-indicator">
@@ -565,6 +585,8 @@
           <div id="game-board">
             <!-- Cards generated here -->
           </div>
+          <!-- Pause Button -->
+          <button id="btn-pause" onclick="Game.togglePause()">Pause</button>
         </div>
       </div>
     </div>
@@ -657,7 +679,10 @@
         monsterQueue: [],
         currentEnemy: null,
         enemyHP: 0,
-        isPlayerTurn: false, // false = Monster Attacks (Defend Phase), true = Player Attacks (Attack Phase)
+        isPlayerTurn: false,
+
+        // Pause State
+        isPaused: false,
 
         // Timers
         timer: 0,
@@ -692,8 +717,22 @@
             selCount: document.getElementById("selected-count"),
             bgSky: document.getElementById("background-layer"),
             roadLayer: document.getElementById("road-layer"),
+            pauseBtn: document.getElementById("btn-pause"),
           };
           SFX.init();
+        },
+
+        // --- Pause Functionality ---
+        togglePause: function () {
+          this.isPaused = !this.isPaused;
+          this.ui.pauseBtn.innerText = this.isPaused ? "Continue" : "Pause";
+
+          // Visual feedback on grid
+          if (this.isPaused) {
+            this.ui.grid.style.opacity = 0.5;
+          } else {
+            this.ui.grid.style.opacity = 1;
+          }
         },
 
         // --- Progression & Hand Selection ---
@@ -817,13 +856,24 @@
 
         startExploration: function () {
           this.currentEnemy = null;
+          this.isPaused = false; // Reset pause on new state
+          this.ui.pauseBtn.innerText = "Pause";
+          this.ui.grid.style.opacity = 1;
+
           this.ui.enemyStats.style.opacity = 0;
           this.ui.enemy.style.right = "-30%";
-          this.ui.hero.innerText = "🏃";
+
+          // UPDATED: Hero to Running State (hero_1.png)
+          this.ui.hero.style.backgroundImage = "url('hero_1.png')";
+
           this.ui.phaseInd.style.display = "none";
-          this.ui.timerCont.style.display = "none";
+
+          // Use visibility instead of display
+          this.ui.timerCont.style.visibility = "hidden";
+
           this.ui.grid.classList.remove("active");
-          this.ui.grid.innerHTML = "";
+          // UPDATED: Do not clear innerHTML, just hide content visibly to preserve space
+          this.ui.grid.style.visibility = "hidden";
 
           // Start animation: only bg moves
           this.ui.bgSky.style.animationPlayState = "running";
@@ -877,7 +927,9 @@
           this.ui.bgSky.style.animationPlayState = "paused";
           // this.ui.roadLayer.style.animationPlayState = 'paused';
 
-          this.ui.hero.innerText = "🧍";
+          // UPDATED: Hero to Stance/Idle State (hero_2.png)
+          this.ui.hero.style.backgroundImage = "url('hero_2.png')";
+
           this.ui.enemy.innerText = this.currentEnemy.icon;
           this.ui.enemyName.innerText = this.currentEnemy.name;
           this.ui.enemy.style.right = "20%";
@@ -931,10 +983,14 @@
             <span class="task">${task} <span style="font-size:1.5rem">${icon}</span></span>
         `;
 
+          // UPDATED: Make sure grid is visible
+          this.ui.grid.style.visibility = "visible";
           this.setupBoard();
 
           // Timer
-          this.ui.timerCont.style.display = "block";
+          // Use visibility instead of display
+          this.ui.timerCont.style.visibility = "visible";
+
           this.timerMax = 10000; // 10 seconds fixed
           this.timer = this.timerMax;
           this.updateTimerBar();
@@ -942,6 +998,9 @@
           clearInterval(this.timerInterval);
           const step = 50;
           this.timerInterval = setInterval(() => {
+            // PAUSE CHECK
+            if (this.isPaused) return;
+
             this.timer -= step;
             this.updateTimerBar();
             if (this.timer <= 0) {
@@ -995,6 +1054,9 @@
         },
 
         flipCard: function (el) {
+          // PAUSE CHECK
+          if (this.isPaused) return;
+
           if (el.classList.contains("flipped") || el.classList.contains("matched") || this.cardsFlipped.length >= 2)
             return;
 
@@ -1061,7 +1123,9 @@
         resolvePhase: function (success) {
           clearInterval(this.timerInterval);
           this.ui.grid.classList.remove("active");
-          this.ui.timerCont.style.display = "none";
+
+          // Use visibility instead of display
+          this.ui.timerCont.style.visibility = "hidden";
 
           if (this.phaseType === "defense") {
             if (success) {
