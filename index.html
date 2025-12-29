@@ -204,7 +204,7 @@
         filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.5));
       }
 
-      /* UPDATED: Hero mirrored to run right */
+      /* Hero mirrored to run right */
       #hero {
         left: 20%;
         z-index: 10;
@@ -281,12 +281,17 @@
       /* Bottom Half: Memory Board */
       #memory-layer {
         flex: 6; /* 60% height */
-        background: #222;
+        /* Background Image bg_1 with fallback */
+        background-color: #222;
+        background-image: url("bg_1.png");
+        background-size: cover;
+        background-position: center;
+
         padding: 10px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        overflow: auto; /* Allow scrolling if grid is too big on small screens */
+        overflow: auto; /* Allow scrolling if grid is too big */
       }
 
       /* Timer Bar */
@@ -330,12 +335,13 @@
         pointer-events: all;
       }
 
-      /* UPDATED: Fixed card size */
+      /* Fixed Card Size */
       .card {
         background-color: transparent;
         perspective: 1000px;
         cursor: pointer;
         position: relative;
+        /* FIXED PIXEL SIZES RESTORED */
         width: 127px;
         height: 180px;
         justify-self: center;
@@ -379,17 +385,20 @@
       .card-back {
         background-color: var(--card-back);
         background-image: url("card.png");
-        background-size: 100% 100%; /* Ensure fits exactly 127x180 */
+        background-size: 100% 100%;
         background-position: center;
         background-repeat: no-repeat;
-
-        /* Hide the default question mark text */
         font-size: 0;
         color: transparent;
       }
 
       .card-front {
-        background: #eee;
+        /* Card front background card_2 with Blue fallback */
+        background-color: #87ceeb; /* Fallback Blue */
+        background-image: url("card_2.png");
+        background-size: cover;
+        background-position: center;
+
         color: #333;
         transform: rotateY(180deg);
         font-size: 3rem;
