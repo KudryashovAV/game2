@@ -108,6 +108,18 @@
         text-align: center;
       }
 
+      /* UPDATED: Style for story text on hand selection */
+      .story-text {
+        font-size: 1rem !important;
+        text-transform: none !important;
+        letter-spacing: normal !important;
+        line-height: 1.5;
+        max-width: 800px;
+        margin: 0 auto 2rem auto;
+        text-align: justify !important;
+        color: #ddd !important;
+      }
+
       button {
         background: var(--accent);
         color: white;
@@ -131,19 +143,28 @@
         opacity: 0.7;
       }
 
-      /* Pause Button Specific Styles */
-      #btn-pause {
+      /* Pause & Mute Button Specific Styles */
+      .control-btn {
         padding: 0.5rem 1.5rem;
         font-size: 1rem;
-        margin-top: 40px;
-        background-color: #333; /* Darker background to distinguish from main actions */
+        background-color: #333;
         box-shadow: 0 3px 0 #111;
         z-index: 50;
+        margin: 0; /* Remove default margins */
+        min-width: 80px;
       }
 
-      #btn-pause:active {
+      .control-btn:active {
         transform: translateY(3px);
         box-shadow: 0 0 0 #111;
+      }
+
+      /* Container for control buttons */
+      #controls-bar {
+        display: flex;
+        justify-content: space-between;
+        width: 326px; /* 102*3 (cards) + 10*2 (gaps) */
+        margin-top: 20px;
       }
 
       /* --- Hand Selection UI --- */
@@ -172,7 +193,6 @@
         background: #2a2a4e;
       }
 
-      /* UPDATED: Icon styles for images in selection */
       .select-card .icon {
         width: 48px;
         height: 48px;
@@ -270,14 +290,12 @@
         transform: translate(-50%, -50%);
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
 
-        /* UPDATED: Banner Animation */
         background-repeat: no-repeat;
         background-size: 100% 100%;
         background-position: center;
         animation: bannerCycle 40s linear infinite;
       }
 
-      /* UPDATED: Banner Cycle Animation */
       @keyframes bannerCycle {
         0%,
         24.9% {
@@ -297,7 +315,6 @@
         }
       }
 
-      /* Scroll Direction Reversed */
       @keyframes scroll {
         from {
           background-position: 100% 0;
@@ -319,7 +336,6 @@
       /* Hero Image Styles */
       #hero {
         left: 20%;
-        /* UPDATED: Reduced size by 25% (150 * 0.75 = 112.5) */
         width: 112.5px;
         height: 112.5px;
         background-image: url("hero_2.png");
@@ -331,19 +347,15 @@
         bottom: 50px;
       }
 
-      /* UPDATED: Enemy Image Styles */
+      /* Enemy Image Styles */
       #enemy {
         right: -30%;
-        transform: scaleX(1); /* Changed from scaleX(-1) to scaleX(1) to flip direction */
-
-        /* Add size and background properties like hero */
+        transform: scaleX(1);
         width: 150px;
         height: 150px;
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center bottom;
-
-        /* Hide text if any */
         font-size: 0;
         color: transparent;
       }
@@ -534,7 +546,6 @@
         flex-direction: column;
       }
 
-      /* UPDATED: Card icon image style on card front */
       .card-front .card-icon {
         width: 50%;
         height: 50%;
@@ -665,8 +676,11 @@
           <div id="game-board">
             <!-- Cards generated here -->
           </div>
-          <!-- Pause Button -->
-          <button id="btn-pause" onclick="Game.togglePause()">Pause</button>
+          <!-- Control Buttons -->
+          <div id="controls-bar">
+            <button id="btn-mute" class="control-btn" onclick="Game.toggleMute()">Mute</button>
+            <button id="btn-pause" class="control-btn" onclick="Game.togglePause()">Pause</button>
+          </div>
         </div>
       </div>
     </div>
@@ -684,12 +698,22 @@
        */
       const SFX = {
         ctx: null,
+        muted: false,
+        bgMusic: null,
+        flipSound: null,
+
         init: function () {
           window.AudioContext = window.AudioContext || window.webkitAudioContext;
           this.ctx = new AudioContext();
+
+          this.bgMusic = new Audio("sound_1.mp3");
+          this.bgMusic.loop = true;
+
+          this.flipSound = new Audio("sound_2.mp3");
         },
+
         playTone: function (freq, type, duration, vol = 0.1) {
-          if (!this.ctx) return;
+          if (!this.ctx || this.muted) return;
           const osc = this.ctx.createOscillator();
           const gain = this.ctx.createGain();
           osc.type = type;
@@ -701,7 +725,14 @@
           osc.start();
           osc.stop(this.ctx.currentTime + duration);
         },
-        flip: () => SFX.playTone(400, "sine", 0.1, 0.1),
+
+        // UPDATED: Use flipSound instead of playTone
+        flip: () => {
+          if (SFX.muted || !SFX.flipSound) return;
+          SFX.flipSound.currentTime = 0;
+          SFX.flipSound.play().catch((e) => {});
+        },
+
         match: () => {
           SFX.playTone(600, "sine", 0.1, 0.1);
           setTimeout(() => SFX.playTone(800, "sine", 0.2, 0.1), 100);
@@ -761,8 +792,9 @@
         enemyHP: 0,
         isPlayerTurn: false,
 
-        // Pause State
+        // Pause & Mute State
         isPaused: false,
+        isMuted: false,
 
         // Timers
         timer: 0,
@@ -798,6 +830,7 @@
             bgSky: document.getElementById("background-layer"),
             roadLayer: document.getElementById("road-layer"),
             pauseBtn: document.getElementById("btn-pause"),
+            muteBtn: document.getElementById("btn-mute"),
           };
 
           // Start Intro Animation
@@ -857,6 +890,17 @@
           }
         },
 
+        toggleMute: function () {
+          this.isMuted = !this.isMuted;
+          SFX.muted = this.isMuted;
+
+          // Handle Audio objects
+          if (SFX.bgMusic) SFX.bgMusic.muted = this.isMuted;
+          if (SFX.flipSound) SFX.flipSound.muted = this.isMuted;
+
+          this.ui.muteBtn.innerText = this.isMuted ? "Unmute" : "Mute";
+        },
+
         // --- Progression & Hand Selection ---
 
         getHandLimit: function () {
@@ -870,7 +914,16 @@
           const limit = this.getHandLimit();
           this.ui.prepLevel.innerText = this.level;
           this.ui.reqCount.innerText = limit;
-          this.ui.handTitle.innerText = `Select ${limit} Cards`;
+
+          // Logic for Level 1 narrative text
+          if (this.level === 1) {
+            this.ui.handTitle.innerText =
+              "Lost in the enchanted forest, the traveler accidentally stepped on a disguised trapdoor and fell into a deep, damp-smelling dungeon. When he woke up, he realized that he had fallen into a trap infested with hungry trolls and fanged monsters from old fairy tales. Now he has only one way — to fight his way through a horde of monsters with a weapon in his hands in order to get to the surface alive. Select 3 cards and go ahead!";
+            this.ui.handTitle.classList.add("story-text");
+          } else {
+            this.ui.handTitle.innerText = `Select ${limit} Cards`;
+            this.ui.handTitle.classList.remove("story-text");
+          }
 
           this.switchScreen("hand");
           this.renderHandSelection();
@@ -931,6 +984,11 @@
         // --- Level Management ---
 
         startLevel: function () {
+          // UPDATED: Start Music
+          if (SFX.bgMusic) {
+            SFX.bgMusic.play().catch((e) => console.log(e));
+          }
+
           // Define monsters for this level
           this.monsterQueue = [];
 
