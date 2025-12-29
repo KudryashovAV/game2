@@ -104,7 +104,7 @@
       #btn-pause {
         padding: 0.5rem 1.5rem;
         font-size: 1rem;
-        /* UPDATED: Margin top removed */
+        /* UPDATED: margin-top removed */
         background-color: #333; /* Darker background to distinguish from main actions */
         box-shadow: 0 3px 0 #111;
         z-index: 50;
@@ -140,14 +140,16 @@
         border-color: var(--accent);
         background: #2a2a4e;
       }
-      /* UPDATED: Icon style for image */
+
+      /* UPDATED: Icon styles for images in selection */
       .select-card .icon {
-        width: 50px;
-        height: 50px;
+        width: 48px;
+        height: 48px;
         display: block;
         margin-bottom: 0.5rem;
         object-fit: contain;
       }
+
       .select-card .type-tag {
         font-size: 0.7rem;
         text-transform: uppercase;
@@ -236,6 +238,32 @@
         left: 50%;
         transform: translate(-50%, -50%);
         box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+
+        /* UPDATED: Banner Animation */
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        background-position: center;
+        animation: bannerCycle 40s linear infinite;
+      }
+
+      /* UPDATED: Banner Cycle Animation */
+      @keyframes bannerCycle {
+        0%,
+        24.9% {
+          background-image: url("banner_1.png");
+        }
+        25%,
+        49.9% {
+          background-image: url("banner_2.png");
+        }
+        50%,
+        74.9% {
+          background-image: url("banner_3.png");
+        }
+        75%,
+        100% {
+          background-image: url("banner_4.png");
+        }
       }
 
       /* Scroll Direction Reversed */
@@ -257,32 +285,36 @@
         z-index: 10; /* Above ground */
       }
 
-      /* UPDATED: Hero Image Styles */
+      /* Hero Image Styles */
       #hero {
         left: 20%;
-        /* REMOVED MIRRORING: transform: scaleX(-1); */
-
-        /* Image handling */
         width: 150px;
         height: 150px;
-        /* Default to Stance (hero_2.png) */
         background-image: url("hero_2.png");
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center bottom;
-
-        /* Remove text properties */
         font-size: 0;
         color: transparent;
-
-        /* UPDATED: Raise hero by 10px (40px base + 10px) */
         bottom: 50px;
       }
 
+      /* UPDATED: Enemy Image Styles */
       #enemy {
         right: -30%;
-        transform: scaleX(-1);
-      } /* Hidden initially */
+        transform: scaleX(1); /* Changed from scaleX(-1) to scaleX(1) to flip direction */
+
+        /* Add size and background properties like hero */
+        width: 150px;
+        height: 150px;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center bottom;
+
+        /* Hide text if any */
+        font-size: 0;
+        color: transparent;
+      }
 
       .dmg-popup {
         position: absolute;
@@ -322,7 +354,6 @@
       /* Combat Message Overlay */
       #phase-indicator {
         position: absolute;
-        /* UPDATED: Changed top position to 30% */
         top: calc(30%);
         left: 50%;
         transform: translate(-50%, -50%);
@@ -336,7 +367,6 @@
         width: 40%;
       }
 
-      /* UPDATED: Adjusted font sizes */
       #phase-indicator .title {
         display: block;
         font-size: 0.75rem;
@@ -356,7 +386,6 @@
         background-image: url("bg_1.png");
         background-size: cover;
         background-position: center;
-
         padding: 10px;
         display: flex;
         flex-direction: column;
@@ -411,8 +440,6 @@
         perspective: 1000px;
         cursor: pointer;
         position: relative;
-        /* FIXED PIXEL SIZES RESTORED */
-        /* UPDATED: New smaller size */
         width: 102px;
         height: 144px;
         justify-self: center;
@@ -475,10 +502,10 @@
         flex-direction: column;
       }
 
-      /* UPDATED: Card icon image style */
+      /* UPDATED: Card icon image style on card front */
       .card-front .card-icon {
-        width: 60%;
-        height: 60%;
+        width: 50%;
+        height: 50%;
         object-fit: contain;
         margin-bottom: 5px;
       }
@@ -543,7 +570,6 @@
       <h1>Memory Combat</h1>
       <h2>System Activated</h2>
       <p style="font-size: 1.5rem; margin-bottom: 1rem; color: #fff">Play now</p>
-      <!-- Added line -->
       <button onclick="Game.goToHandSelection()">Initialize</button>
     </div>
 
@@ -680,10 +706,10 @@
       };
 
       const MONSTER_TEMPLATES = [
-        { name: "Slime", icon: "🦠", hp: 30, atk: 10 },
-        { name: "Goblin", icon: "👺", hp: 50, atk: 15 },
-        { name: "Skeleton", icon: "💀", hp: 40, atk: 12 },
-        { name: "Dragon", icon: "🐉", hp: 100, atk: 25 },
+        { name: "Slime", icon: "enemy_1.png", hp: 30, atk: 10 },
+        { name: "Goblin", icon: "enemy_2.png", hp: 50, atk: 15 },
+        { name: "Skeleton", icon: "enemy_3.png", hp: 40, atk: 12 },
+        { name: "Dragon", icon: "enemy_4.png", hp: 100, atk: 25 },
       ];
 
       /**
@@ -894,8 +920,8 @@
           this.ui.timerCont.style.visibility = "hidden";
 
           this.ui.grid.classList.remove("active");
-          // UPDATED: Do not clear innerHTML, just hide content visibly to preserve space
-          this.ui.grid.style.visibility = "hidden";
+          // REVERTED: Clear HTML to collapse height during run, as per previous logic restoration
+          this.ui.grid.innerHTML = "";
 
           // Start animation: only bg moves
           this.ui.bgSky.style.animationPlayState = "running";
@@ -952,7 +978,9 @@
           // UPDATED: Hero to Stance/Idle State (hero_2.png)
           this.ui.hero.style.backgroundImage = "url('hero_2.png')";
 
-          this.ui.enemy.innerText = this.currentEnemy.icon;
+          // UPDATED: Use background image for enemy
+          this.ui.enemy.style.backgroundImage = `url('${this.currentEnemy.icon}')`;
+
           this.ui.enemyName.innerText = this.currentEnemy.name;
           this.ui.enemy.style.right = "20%";
           this.ui.enemyStats.style.opacity = 1;
@@ -1005,8 +1033,7 @@
             <span class="task">${task} ${iconHtml}</span>
         `;
 
-          // UPDATED: Make sure grid is visible
-          this.ui.grid.style.visibility = "visible";
+          // REVERTED: No need to set visibility visible here since we use innerHTML
           this.setupBoard();
 
           // Timer
@@ -1184,7 +1211,7 @@
           this.ui.enemy.style.transform = "scale(0)";
 
           setTimeout(() => {
-            this.ui.enemy.style.transform = "scaleX(-1)";
+            this.ui.enemy.style.transform = "scaleX(1)"; /* Changed reset to scaleX(1) */
             this.startExploration();
           }, 2000);
         },
