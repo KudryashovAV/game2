@@ -56,6 +56,37 @@
         z-index: -1;
       }
 
+      /* Intro Screen Specifics */
+      .intro-element {
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+
+      #intro-logo-1 {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 80%;
+        max-height: 50vh;
+        z-index: 101;
+      }
+
+      #intro-logo-2 {
+        max-width: 60%;
+        max-height: 30vh;
+        margin-bottom: 2rem;
+      }
+
+      #intro-title {
+        font-size: 3rem;
+        margin-bottom: 2rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--accent);
+        text-align: center;
+      }
+
       /* Transition Overlay */
       #screen-transition {
         background: rgba(0, 0, 0, 0.95);
@@ -104,7 +135,7 @@
       #btn-pause {
         padding: 0.5rem 1.5rem;
         font-size: 1rem;
-        /* UPDATED: margin-top removed */
+        margin-top: 40px;
         background-color: #333; /* Darker background to distinguish from main actions */
         box-shadow: 0 3px 0 #111;
         z-index: 50;
@@ -568,10 +599,10 @@
   <body>
     <!-- Intro Screen -->
     <div id="screen-intro" class="screen">
-      <h1>Memory Combat</h1>
-      <h2>System Activated</h2>
-      <p style="font-size: 1.5rem; margin-bottom: 1rem; color: #fff">Play now</p>
-      <button onclick="Game.goToHandSelection()">Initialize</button>
+      <img id="intro-logo-1" src="logo_1.png" alt="Logo 1" class="intro-element" />
+      <img id="intro-logo-2" src="logo_2.png" alt="Logo 2" class="intro-element" />
+      <h1 id="intro-title" class="intro-element">MEMORY COMBAT</h1>
+      <button id="intro-btn" class="intro-element" onclick="Game.goToHandSelection()">Start</button>
     </div>
 
     <!-- Hand Selection Screen -->
@@ -768,7 +799,49 @@
             roadLayer: document.getElementById("road-layer"),
             pauseBtn: document.getElementById("btn-pause"),
           };
+
+          // Start Intro Animation
+          this.runIntro();
+
           SFX.init();
+        },
+
+        runIntro: function () {
+          const logo1 = document.getElementById("intro-logo-1");
+          const logo2 = document.getElementById("intro-logo-2");
+          const title = document.getElementById("intro-title");
+          const btn = document.getElementById("intro-btn");
+
+          // Step 1: Wait 0.3s
+          setTimeout(() => {
+            // Step 2: Fade in Logo 1
+            logo1.style.opacity = 1;
+
+            // Wait for appearance (0.5s transition) + 0.3s
+            setTimeout(() => {
+              // Step 3: Fade out Logo 1 (0.1s)
+              logo1.style.transition = "opacity 0.1s";
+              logo1.style.opacity = 0;
+
+              // Wait 0.1s (fade out) + 0.2s
+              setTimeout(() => {
+                // Step 4: Fade in Logo 2
+                logo2.style.opacity = 1;
+
+                // Wait appearance (0.5s) + 0.3s
+                setTimeout(() => {
+                  // Step 5: Fade in Title
+                  title.style.opacity = 1;
+
+                  // Wait appearance (0.5s) + 0.3s
+                  setTimeout(() => {
+                    // Step 6: Fade in Button
+                    btn.style.opacity = 1;
+                  }, 800);
+                }, 800);
+              }, 300);
+            }, 800);
+          }, 300);
         },
 
         // --- Pause Functionality ---
