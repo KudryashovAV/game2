@@ -149,13 +149,13 @@
 
       /* Pause & Mute Button Specific Styles */
       .control-btn {
-        padding: 0.5rem 1.5rem;
+        padding: 0.5rem 1rem; /* Slightly reduced horizontal padding */
         font-size: 1rem;
         background-color: #333;
         box-shadow: 0 3px 0 #111;
         z-index: 50;
         margin: 0; /* Remove default margins */
-        min-width: 80px;
+        min-width: 70px; /* Slightly reduced min-width */
       }
 
       .control-btn:active {
@@ -686,6 +686,8 @@
           <!-- Control Buttons -->
           <div id="controls-bar">
             <button id="btn-mute" class="control-btn" onclick="Game.toggleMute()">Mute</button>
+            <!-- UPDATED: Added Skip Button -->
+            <button id="btn-skip" class="control-btn" onclick="Game.skipLevel()">Skip</button>
             <button id="btn-pause" class="control-btn" onclick="Game.togglePause()">Pause</button>
           </div>
         </div>
@@ -848,6 +850,7 @@
             roadLayer: document.getElementById("road-layer"),
             pauseBtn: document.getElementById("btn-pause"),
             muteBtn: document.getElementById("btn-mute"),
+            skipBtn: document.getElementById("btn-skip"), // Added skip button reference
           };
 
           // Start Intro Animation
@@ -910,6 +913,21 @@
           if (SFX.flipSound) SFX.flipSound.muted = this.isMuted;
 
           this.ui.muteBtn.innerText = this.isMuted ? "Unmute" : "Mute";
+        },
+
+        // UPDATED: Skip Level Functionality
+        skipLevel: function () {
+          // Stop everything
+          clearInterval(this.timerInterval);
+          this.ui.bgSky.style.animationPlayState = "paused";
+
+          // Reset UI states if needed
+          this.isPaused = false;
+          this.ui.pauseBtn.innerText = "Pause";
+          this.ui.grid.style.opacity = 1;
+
+          // Trigger completion
+          this.levelComplete();
         },
 
         // --- Progression & Hand Selection ---
@@ -1428,7 +1446,7 @@
           // Show image
           const img = document.getElementById("result-img");
           if (img) {
-            img.src = "final.png";
+            img.src = "final.webp";
             img.style.display = "block";
           }
 
