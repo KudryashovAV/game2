@@ -124,6 +124,16 @@
         color: #ddd !important;
       }
 
+      /* UPDATED: Final message style */
+      .final-msg {
+        font-size: 3rem !important;
+        color: orange !important;
+        text-transform: uppercase;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px #000;
+      }
+
       button {
         background: var(--accent);
         color: white;
@@ -696,7 +706,9 @@
 
     <!-- Result Screen -->
     <div id="screen-result" class="screen hidden">
-      <!-- UPDATED: Result Image Element -->
+      <h1 id="result-title">Victory!</h1>
+      <!-- UPDATED: Reordered - Message is now above image -->
+      <p id="result-msg" style="white-space: pre-line; text-align: center">You found a new card.</p>
       <img
         id="result-img"
         class="intro-element"
@@ -704,9 +716,6 @@
         alt="Result"
         style="display: none; max-width: 60%; margin-bottom: 20px"
       />
-      <h1 id="result-title">Victory!</h1>
-      <!-- UPDATED: Added pre-line for newlines -->
-      <p id="result-msg" style="white-space: pre-line; text-align: center">You found a new card.</p>
       <button onclick="location.reload()">Restart Game</button>
     </div>
 
@@ -1034,7 +1043,10 @@
           // Show Transition
           this.playTransition(`Level ${this.level}`, "Start!", () => {
             this.switchScreen("game");
-            this.heroHP = this.maxHeroHP;
+            if (this.level === 1) {
+              // Only reset on first level
+              this.heroHP = this.maxHeroHP;
+            }
             this.updateHP();
             this.ui.levelDisplay.innerText = this.level;
             this.startExploration();
@@ -1435,7 +1447,12 @@
           title.style.display = "block";
           title.innerText = "DEFEAT";
 
-          document.getElementById("result-msg").innerText = `Fell at Level ${this.level}`;
+          const msg = document.getElementById("result-msg");
+          msg.innerText = `Fell at Level ${this.level}`;
+          msg.classList.remove("final-msg"); // Remove class
+          msg.style.color = ""; // Reset inline color if any
+          msg.style.fontSize = ""; // Reset inline size
+
           this.switchScreen("result");
         },
 
@@ -1454,8 +1471,10 @@
           const title = document.getElementById("result-title");
           title.style.display = "none";
 
-          // Set New Text
-          document.getElementById("result-msg").innerText = "Now you are FREE!\nOur congratulations!";
+          // Set New Text and Style
+          const msg = document.getElementById("result-msg");
+          msg.innerText = "Now you are FREE!\nOur congratulations!";
+          msg.classList.add("final-msg");
 
           this.switchScreen("result");
         },
