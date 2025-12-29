@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Memory Combat</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --panel-bg: #16213e;
+            --accent: #e94560;
+            --text: #ffffff;
+            --card-back: #0f3460;
+            --timer-bg: #333;
+            --timer-fill: #e94560;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Screens --- */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg-color);
+            z-index: 100;
+            transition: opacity 0.5s;
+        }
+
+        .screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Transition Overlay */
+        #screen-transition {
+            background: rgba(0,0,0,0.95);
+            color: var(--accent);
+            z-index: 200;
+        }
+
+        h1 { font-size: 3rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 2px; color: var(--accent); text-align: center; }
+        h2 { margin-bottom: 2rem; color: #aaa; text-align: center;}
+        
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0.5rem;
+            transition: transform 0.1s, filter 0.2s;
+            box-shadow: 0 4px 0 #9e1f32;
+        }
+        
+        button:active { transform: translateY(4px); box-shadow: 0 0 0 #9e1f32; }
+        button:disabled { filter: grayscale(1); cursor: not-allowed; opacity: 0.7; }
+
+        /* --- Hand Selection UI --- */
+        .card-selection-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .select-card {
+            background: var(--panel-bg);
+            border: 2px solid #444;
+            padding: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+        }
+        
+        .select-card.selected { border-color: var(--accent); background: #2a2a4e; }
+        .select-card .icon { font-size: 2rem; display: block; margin-bottom: 0.5rem; }
+        .select-card .type-tag { font-size: 0.7rem; text-transform: uppercase; color: #888; display: block; }
+        .select-card .new-badge { 
+            position: absolute; top: -5px; right: -5px; 
+            background: #ffd700; color: #000; 
+            font-size: 0.7rem; padding: 2px 5px; 
+            border-radius: 4px; font-weight: bold;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+        /* --- Game Layout --- */
+        #game-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            max-width: 600px; /* Mobile focused */
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Top Half: World & Combat */
+        #world-layer {
+            flex: 4; /* 40% height approx */
+            background: linear-gradient(to bottom, #0f0c29, #302b63, #24243e);
+            position: relative;
+            overflow: hidden;
+            border-bottom: 4px solid #000;
+        }
+
+        /* Parallax/Scrolling Effect */
+        .scenery {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 200%;
+            height: 100px;
+            background: 
+                conic-gradient(from 90deg at 1px 1px, #ffffff05 90deg, transparent 0) 0 0/20px 20px;
+            animation: scroll 10s linear infinite;
+        }
+        
+        @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        .entity {
+            position: absolute;
+            bottom: 20px;
+            font-size: 4rem;
+            transition: transform 0.3s, left 0.5s;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+
+        #hero { left: 20%; z-index: 10; }
+        #enemy { right: -30%; z-index: 9; transform: scaleX(-1); } /* Hidden initially */
+        
+        .dmg-popup {
+            position: absolute;
+            color: #fff;
+            font-weight: bold;
+            font-size: 2rem;
+            animation: floatUp 1s forwards;
+            pointer-events: none;
+            text-shadow: 2px 2px 0 #000;
+            z-index: 50;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 0;
+            width: 100%;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* Combat Message Overlay */
+        #phase-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid var(--accent);
+            text-align: center;
+            display: none;
+            z-index: 20;
+            width: 80%;
+        }
+        
+        #phase-indicator .title { display: block; font-size: 1.5rem; color: var(--accent); margin-bottom: 5px; }
+        #phase-indicator .task { display: block; font-size: 1rem; color: white; }
+
+        /* Bottom Half: Memory Board */
+        #memory-layer {
+            flex: 6; /* 60% height */
+            background: #222;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Timer Bar */
+        #timer-container {
+            width: 100%;
+            height: 10px;
+            background: var(--timer-bg);
+            margin-bottom: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none; /* Hidden when not in combat */
+        }
+        
+        #timer-bar {
+            height: 100%;
+            width: 100%;
+            background: var(--timer-fill);
+            transform-origin: left;
+            transition: width 0.1s linear;
+        }
+
+        /* Card Grid */
+        #card-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr); /* Default 2 rows */
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+            max-height: 400px;
+            pointer-events: none; /* Disabled by default */
+        }
+
+        /* 3x3 Grid for Level 3+ */
+        #card-grid.grid-3x3 {
+            grid-template-rows: repeat(3, 1fr);
+        }
+        
+        #card-grid.active { pointer-events: all; }
+
+        .card {
+            background-color: transparent;
+            perspective: 1000px;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.4s;
+            transform-style: preserve-3d;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .card.flipped .card-inner { transform: rotateY(180deg); }
+        .card.matched .card-inner { opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 2px solid #333;
+        }
+
+        .card-back {
+            background: var(--card-back);
+            background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 10px, transparent 10px, transparent 20px);
+            font-size: 2rem;
+            color: rgba(255,255,255,0.2);
+        }
+
+        .card-front {
+            background: #eee;
+            color: #333;
+            transform: rotateY(180deg);
+            font-size: 3rem;
+            flex-direction: column;
+        }
+        
+        .card-front span { font-size: 0.8rem; margin-top: 5px; font-weight: bold; }
+
+        /* Effects */
+        .shake { animation: shake 0.5s; }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* Health Bars */
+        .hp-bar-container { width: 100px; background: #333; height: 10px; border-radius: 5px; margin-top: 5px; border: 1px solid #fff; }
+        .hp-bar { height: 100%; background: #4caf50; width: 100%; transition: width 0.3s; }
+        .hp-bar.enemy { background: #e94560; }
+        
+        .stats-box { display: flex; flex-direction: column; align-items: center; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Intro Screen -->
+    <div id="screen-intro" class="screen">
+        <h1>Memory Combat</h1>
+        <h2>System Activated</h2>
+        <button onclick="Game.goToHandSelection()">Initialize</button>
+    </div>
+
+    <!-- Hand Selection Screen -->
+    <div id="screen-hand" class="screen hidden">
+        <h2 id="hand-title">Select 3 Cards</h2>
+        <p>Prepare for Level <span id="prep-level-num">1</span></p>
+        <div class="card-selection-grid" id="hand-selection-container">
+            <!-- Populated by JS -->
+        </div>
+        <p>Selected: <span id="selected-count">0</span>/<span id="required-count">3</span></p>
+        <button id="btn-start-level" disabled onclick="Game.startLevel()">Enter Zone</button>
+    </div>
+
+    <!-- Transition Screen -->
+    <div id="screen-transition" class="screen hidden">
+        <h1 id="trans-title">Level 1</h1>
+        <h2 id="trans-sub">Complete</h2>
+    </div>
+
+    <!-- Game Loop Screen -->
+    <div id="screen-game" class="screen hidden">
+        <div id="game-container">
+            
+            <!-- World Layer -->
+            <div id="world-layer">
+                <div class="scenery"></div>
+                
+                <div id="hud">
+                    <div class="stats-box">
+                        <span>HERO</span>
+                        <div class="hp-bar-container"><div id="hero-hp" class="hp-bar"></div></div>
+                    </div>
+                    <div class="stats-box">
+                        <span>LEVEL <span id="level-display">1</span></span>
+                    </div>
+                    <div class="stats-box" id="enemy-stats" style="opacity: 0;">
+                        <span id="enemy-name">ENEMY</span>
+                        <div class="hp-bar-container"><div id="enemy-hp" class="hp-bar enemy"></div></div>
+                    </div>
+                </div>
+
+                <div id="hero" class="entity">🏃</div>
+                <div id="enemy" class="entity">👹</div>
+
+                <div id="phase-indicator">
+                    <span class="title">DEFEND!</span>
+                    <span class="task">Find 🛡️ Shield</span>
+                </div>
+            </div>
+
+            <!-- Memory Layer -->
+            <div id="memory-layer">
+                <div id="timer-container"><div id="timer-bar"></div></div>
+                <div id="card-grid">
+                    <!-- Cards generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="screen-result" class="screen hidden">
+        <h1 id="result-title">Victory!</h1>
+        <p id="result-msg">You found a new card.</p>
+        <button onclick="location.reload()">Restart Game</button>
+    </div>
+
+<script>
+/**
+ * Audio System
+ */
+const SFX = {
+    ctx: null,
+    init: function() {
+        window.AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+    },
+    playTone: function(freq, type, duration, vol=0.1) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    },
+    flip: () => SFX.playTone(400, 'sine', 0.1, 0.1),
+    match: () => {
+        SFX.playTone(600, 'sine', 0.1, 0.1);
+        setTimeout(() => SFX.playTone(800, 'sine', 0.2, 0.1), 100);
+    },
+    heal: () => {
+        SFX.playTone(500, 'sine', 0.2, 0.1);
+        setTimeout(() => SFX.playTone(700, 'sine', 0.4, 0.1), 200);
+    },
+    error: () => SFX.playTone(150, 'sawtooth', 0.3, 0.1),
+    attack: () => SFX.playTone(100, 'square', 0.1, 0.2),
+    defend: () => SFX.playTone(300, 'triangle', 0.3, 0.2),
+    win: () => {
+        [400, 500, 600, 800].forEach((f, i) => setTimeout(() => SFX.playTone(f, 'sine', 0.3, 0.1), i * 150));
+    },
+    lose: () => {
+        [300, 250, 200, 150].forEach((f, i) => setTimeout(() => SFX.playTone(f, 'sawtooth', 0.4, 0.1), i * 200));
+    }
+};
+
+/**
+ * Data Definitions
+ * Types: 'attack', 'defense', 'heal'
+ */
+const CARD_TYPES = {
+    sword: { id: 'sword', icon: '⚔️', name: 'Sword', color: '#ff4757', type: 'attack' },
+    shield: { id: 'shield', icon: '🛡️', name: 'Shield', color: '#2ed573', type: 'defense' },
+    potion: { id: 'potion', icon: '❤️', name: 'Potion', color: '#ff7f50', type: 'heal' },
+    fire:   { id: 'fire', icon: '🔥', name: 'Fire', color: '#ffa502', type: 'attack' },
+    ice:    { id: 'ice', icon: '❄️', name: 'Freeze', color: '#70a1ff', type: 'defense' },
+    lightning: { id: 'lightning', icon: '⚡', name: 'Bolt', color: '#ffd700', type: 'attack' },
+    poison: { id: 'poison', icon: '☠️', name: 'Venom', color: '#a55eea', type: 'attack' },
+    // Empty type definition for the grid
+    empty: { id: 'empty', icon: '🚫', name: 'Void', color: '#666', type: 'none' }
+};
+
+const MONSTER_TEMPLATES = [
+    { name: 'Slime', icon: '🦠', hp: 30, atk: 10 },
+    { name: 'Goblin', icon: '👺', hp: 50, atk: 15 },
+    { name: 'Skeleton', icon: '💀', hp: 40, atk: 12 },
+    { name: 'Dragon', icon: '🐉', hp: 100, atk: 25 }
+];
+
+/**
+ * Game Logic
+ */
+const Game = {
+    // State
+    deck: ['sword', 'shield', 'potion'],
+    hand: [],
+    level: 1,
+    heroHP: 100,
+    maxHeroHP: 100,
+    
+    // Encounter State
+    monsterQueue: [],
+    currentEnemy: null,
+    enemyHP: 0,
+    isPlayerTurn: false, // false = Monster Attacks (Defend Phase), true = Player Attacks (Attack Phase)
+    
+    // Timers
+    timer: 0,
+    timerMax: 0,
+    timerInterval: null,
+    cardsFlipped: [],
+    
+    ui: {},
+    newlyUnlocked: null, 
+
+    init: function() {
+        this.ui = {
+            intro: document.getElementById('screen-intro'),
+            hand: document.getElementById('screen-hand'),
+            handTitle: document.getElementById('hand-title'),
+            game: document.getElementById('screen-game'),
+            result: document.getElementById('screen-result'),
+            trans: document.getElementById('screen-transition'),
+            grid: document.getElementById('card-grid'),
+            timerBar: document.getElementById('timer-bar'),
+            timerCont: document.getElementById('timer-container'),
+            heroHP: document.getElementById('hero-hp'),
+            enemyHP: document.getElementById('enemy-hp'),
+            enemyStats: document.getElementById('enemy-stats'),
+            enemyName: document.getElementById('enemy-name'),
+            hero: document.getElementById('hero'),
+            enemy: document.getElementById('enemy'),
+            phaseInd: document.getElementById('phase-indicator'),
+            levelDisplay: document.getElementById('level-display'),
+            prepLevel: document.getElementById('prep-level-num'),
+            reqCount: document.getElementById('required-count'),
+            selCount: document.getElementById('selected-count')
+        };
+        SFX.init();
+    },
+
+    // --- Progression & Hand Selection ---
+
+    getHandLimit: function() {
+        // Level 1-2: 3 cards. Level 3+: 4 cards.
+        return this.level >= 3 ? 4 : 3;
+    },
+
+    goToHandSelection: function() {
+        if (SFX.ctx && SFX.ctx.state === 'suspended') SFX.ctx.resume();
+        
+        const limit = this.getHandLimit();
+        this.ui.prepLevel.innerText = this.level;
+        this.ui.reqCount.innerText = limit;
+        this.ui.handTitle.innerText = `Select ${limit} Cards`;
+        
+        this.switchScreen('hand');
+        this.renderHandSelection();
+    },
+
+    renderHandSelection: function() {
+        const container = document.getElementById('hand-selection-container');
+        container.innerHTML = '';
+        this.hand = [];
+        this.updateStartButton();
+
+        // Unique deck
+        const uniqueDeck = [...new Set(this.deck)];
+        
+        uniqueDeck.forEach(typeId => {
+            const data = CARD_TYPES[typeId];
+            if (data.id === 'empty') return; // Don't show empty card in selection
+
+            const div = document.createElement('div');
+            div.className = 'select-card';
+            if (this.newlyUnlocked === typeId) {
+                div.innerHTML = `<span class="new-badge">NEW!</span>`;
+            }
+            div.innerHTML += `
+                <span class="icon">${data.icon}</span>
+                <span>${data.name}</span>
+                <span class="type-tag">${data.type}</span>
+            `;
+            div.onclick = () => this.toggleCardSelection(typeId, div);
+            container.appendChild(div);
+        });
+        
+        // Clear badge after viewing
+        this.newlyUnlocked = null;
+    },
+
+    toggleCardSelection: function(id, el) {
+        const limit = this.getHandLimit();
+
+        if (this.hand.includes(id)) {
+            this.hand = this.hand.filter(c => c !== id);
+            el.classList.remove('selected');
+        } else {
+            if (this.hand.length < limit) {
+                this.hand.push(id);
+                el.classList.add('selected');
+            }
+        }
+        this.ui.selCount.innerText = this.hand.length;
+        this.updateStartButton();
+    },
+
+    updateStartButton: function() {
+        const limit = this.getHandLimit();
+        document.getElementById('btn-start-level').disabled = this.hand.length !== limit;
+    },
+
+    // --- Level Management ---
+
+    startLevel: function() {
+        // Define monsters for this level
+        this.monsterQueue = [];
+        
+        if (this.level < 5) {
+            // Levels 1-4: 1 Monster
+            const idx = (this.level - 1) % MONSTER_TEMPLATES.length;
+            this.monsterQueue.push(JSON.parse(JSON.stringify(MONSTER_TEMPLATES[idx])));
+        } else {
+            // Level 5: Boss Rush (2 Monsters)
+            this.monsterQueue.push(JSON.parse(JSON.stringify(MONSTER_TEMPLATES[1]))); // Goblin
+            this.monsterQueue.push(JSON.parse(JSON.stringify(MONSTER_TEMPLATES[3]))); // Dragon
+        }
+
+        // Show Transition
+        this.playTransition(`Level ${this.level}`, "Start!", () => {
+            this.switchScreen('game');
+            this.heroHP = this.maxHeroHP;
+            this.updateHP();
+            this.ui.levelDisplay.innerText = this.level;
+            this.startExploration();
+        });
+    },
+
+    playTransition: function(title, sub, callback) {
+        const t = this.ui.trans;
+        document.getElementById('trans-title').innerText = title;
+        document.getElementById('trans-sub').innerText = sub;
+        
+        this.ui.intro.classList.add('hidden');
+        this.ui.hand.classList.add('hidden');
+        this.ui.game.classList.add('hidden');
+        this.ui.result.classList.add('hidden');
+        
+        t.classList.remove('hidden');
+        t.style.opacity = 1;
+        
+        setTimeout(() => {
+            t.style.opacity = 0;
+            setTimeout(() => {
+                t.classList.add('hidden');
+                if (callback) callback();
+            }, 500);
+        }, 2000);
+    },
+
+    startExploration: function() {
+        this.currentEnemy = null;
+        this.ui.enemyStats.style.opacity = 0;
+        this.ui.enemy.style.right = '-30%';
+        this.ui.hero.innerText = '🏃';
+        this.ui.phaseInd.style.display = 'none';
+        this.ui.timerCont.style.display = 'none';
+        this.ui.grid.classList.remove('active');
+        this.ui.grid.innerHTML = '';
+        document.querySelector('.scenery').style.animationPlayState = 'running';
+
+        if (this.monsterQueue.length > 0) {
+            setTimeout(() => this.triggerEncounter(), 2000);
+        } else {
+            this.levelComplete();
+        }
+    },
+
+    levelComplete: function() {
+        if (this.level === 5) {
+            this.gameWin();
+            return;
+        }
+
+        // Drop Logic: Add random new card type not in deck, or duplicate if all owned
+        const allTypes = Object.keys(CARD_TYPES).filter(k => k !== 'empty');
+        const unowned = allTypes.filter(t => !this.deck.includes(t));
+        let reward = '';
+        
+        if (unowned.length > 0) {
+            reward = unowned[Math.floor(Math.random() * unowned.length)];
+            this.deck.push(reward);
+            this.newlyUnlocked = reward;
+        } else {
+            reward = allTypes[Math.floor(Math.random() * allTypes.length)];
+            this.deck.push(reward); 
+        }
+
+        this.level++;
+        this.playTransition("Victory!", `Loot: ${CARD_TYPES[reward].name}`, () => {
+            this.goToHandSelection();
+        });
+    },
+
+    // --- Combat System ---
+
+    triggerEncounter: function() {
+        this.currentEnemy = this.monsterQueue.shift();
+        this.enemyHP = this.currentEnemy.hp;
+        
+        // Reset turn state
+        this.isPlayerTurn = false; // Monster attacks first (Player defends)
+
+        document.querySelector('.scenery').style.animationPlayState = 'paused';
+        this.ui.hero.innerText = '🧍';
+        this.ui.enemy.innerText = this.currentEnemy.icon;
+        this.ui.enemyName.innerText = this.currentEnemy.name;
+        this.ui.enemy.style.right = '20%';
+        this.ui.enemyStats.style.opacity = 1;
+        this.updateHP();
+
+        setTimeout(() => this.nextTurn(), 1000);
+    },
+
+    nextTurn: function() {
+        if (this.enemyHP <= 0) {
+            this.winEncounter();
+            return;
+        }
+        if (this.heroHP <= 0) {
+            this.gameOver();
+            return;
+        }
+
+        let phaseType = this.isPlayerTurn ? 'attack' : 'defense';
+        this.startPhase(phaseType);
+        
+        // Flip turn for next round
+        this.isPlayerTurn = !this.isPlayerTurn;
+    },
+
+    startPhase: function(phaseType) {
+        this.phaseType = phaseType;
+        this.ui.phaseInd.style.display = 'block';
+        
+        let color = '#fff';
+        let title = '';
+        let task = '';
+        let icon = '';
+
+        if (phaseType === 'defense') {
+            title = "MONSTER ATTACKS!";
+            task = "Find DEFENSE";
+            color = "#e94560";
+            icon = "🛡️";
+            SFX.attack(); 
+        } else {
+            title = "YOUR TURN!";
+            task = "Find ATTACK";
+            color = "#2ed573";
+            icon = "⚔️";
+        }
+
+        this.ui.phaseInd.innerHTML = `
+            <span class="title" style="color:${color}">${title}</span>
+            <span class="task">${task} <span style="font-size:1.5rem">${icon}</span></span>
+        `;
+
+        this.setupBoard();
+
+        // Timer
+        this.ui.timerCont.style.display = 'block';
+        this.timerMax = 10000; // 10 seconds fixed
+        this.timer = this.timerMax;
+        this.updateTimerBar();
+
+        clearInterval(this.timerInterval);
+        const step = 50;
+        this.timerInterval = setInterval(() => {
+            this.timer -= step;
+            this.updateTimerBar();
+            if (this.timer <= 0) {
+                this.resolvePhase(false);
+            }
+        }, step);
+    },
+
+    setupBoard: function() {
+        let boardCards = [];
+        // Add pairs
+        this.hand.forEach(type => {
+            boardCards.push(type);
+            boardCards.push(type);
+        });
+
+        // Level 3+ Logic: Add Empty Card and adjust grid
+        if (this.level >= 3) {
+            boardCards.push('empty');
+            this.ui.grid.classList.add('grid-3x3');
+        } else {
+            this.ui.grid.classList.remove('grid-3x3');
+        }
+        
+        // Shuffle
+        for (let i = boardCards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [boardCards[i], boardCards[j]] = [boardCards[j], boardCards[i]];
+        }
+
+        this.ui.grid.innerHTML = '';
+        this.ui.grid.classList.add('active');
+        this.cardsFlipped = [];
+        
+        boardCards.forEach((type, index) => {
+            const cardData = CARD_TYPES[type];
+            const el = document.createElement('div');
+            el.className = 'card';
+            el.dataset.type = type;
+            el.innerHTML = `
+                <div class="card-inner">
+                    <div class="card-front" style="color:${cardData.color}">
+                        ${cardData.icon}<span>${cardData.name}</span>
+                    </div>
+                    <div class="card-back">?</div>
+                </div>
+            `;
+            el.onclick = () => this.flipCard(el);
+            this.ui.grid.appendChild(el);
+        });
+    },
+
+    flipCard: function(el) {
+        if (el.classList.contains('flipped') || el.classList.contains('matched') || this.cardsFlipped.length >= 2) return;
+        
+        SFX.flip();
+        el.classList.add('flipped');
+        this.cardsFlipped.push(el);
+
+        if (this.cardsFlipped.length === 2) {
+            this.checkMatch();
+        }
+    },
+
+    checkMatch: function() {
+        const [c1, c2] = this.cardsFlipped;
+        const type1 = c1.dataset.type;
+        const type2 = c2.dataset.type;
+
+        // EMPTY CARD LOGIC:
+        // Empty card has type 'empty'.
+        // It never matches anything, not even itself (there's only 1 anyway).
+        // Standard mismatch logic applies automatically because type1 != type2.
+        
+        if (type1 === type2 && type1 !== 'empty') {
+            // Match Found
+            setTimeout(() => {
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                this.cardsFlipped = [];
+                
+                const cardData = CARD_TYPES[type1];
+
+                // HEAL LOGIC
+                if (cardData.type === 'heal') {
+                    SFX.heal();
+                    const healAmt = 25;
+                    this.heroHP = Math.min(this.heroHP + healAmt, this.maxHeroHP);
+                    this.updateHP();
+                    this.showPopup(`+${healAmt} HP`, "#2ed573");
+                } 
+                else if (cardData.type === this.phaseType) {
+                    // Correct Type found
+                    SFX.match();
+                    this.resolvePhase(true);
+                } else {
+                    // Correct match but wrong type
+                    SFX.match();
+                    this.showPopup("Wrong Type!", "#aaa");
+                }
+            }, 500);
+        } else {
+            // Mismatch
+            setTimeout(() => {
+                SFX.error();
+                c1.classList.add('shake');
+                c2.classList.add('shake');
+                setTimeout(() => {
+                    c1.classList.remove('flipped', 'shake');
+                    c2.classList.remove('flipped', 'shake');
+                    this.cardsFlipped = [];
+                }, 500);
+            }, 800);
+        }
+    },
+
+    resolvePhase: function(success) {
+        clearInterval(this.timerInterval);
+        this.ui.grid.classList.remove('active');
+        this.ui.timerCont.style.display = 'none';
+
+        if (this.phaseType === 'defense') {
+            if (success) {
+                SFX.defend();
+                this.showPopup("BLOCKED!", "#2ed573");
+            } else {
+                SFX.attack();
+                this.takeDamage(this.currentEnemy.atk);
+                this.showPopup(`-${this.currentEnemy.atk} HP`, "#e94560");
+                this.shakeScreen();
+            }
+        } else if (this.phaseType === 'attack') {
+            if (success) {
+                SFX.attack();
+                const dmg = 20;
+                this.enemyHP -= dmg;
+                this.updateHP();
+                this.showPopup(`HIT! -${dmg}`, "#fff");
+                this.animateHeroAttack();
+            } else {
+                this.showPopup("MISSED!", "#aaa");
+            }
+        }
+
+        setTimeout(() => {
+            this.nextTurn();
+        }, 1500);
+    },
+
+    winEncounter: function() {
+        SFX.win();
+        this.showPopup("DESTROYED", "#ffd700");
+        this.ui.enemy.style.transform = "scale(0)";
+        
+        setTimeout(() => {
+            this.ui.enemy.style.transform = "scaleX(-1)";
+            this.startExploration();
+        }, 2000);
+    },
+
+    takeDamage: function(amount) {
+        this.heroHP -= amount;
+        this.updateHP();
+        document.body.style.backgroundColor = "#500";
+        setTimeout(() => document.body.style.backgroundColor = "var(--bg-color)", 100);
+    },
+
+    updateHP: function() {
+        const heroPct = (this.heroHP / this.maxHeroHP) * 100;
+        this.ui.heroHP.style.width = Math.max(0, heroPct) + "%";
+        
+        if (this.currentEnemy) {
+            const enemyPct = (this.enemyHP / this.currentEnemy.hp) * 100;
+            this.ui.enemyHP.style.width = Math.max(0, enemyPct) + "%";
+        }
+    },
+
+    updateTimerBar: function() {
+        const pct = (this.timer / this.timerMax) * 100;
+        this.ui.timerBar.style.width = pct + "%";
+        if (pct < 30) this.ui.timerBar.style.background = "red";
+        else this.ui.timerBar.style.background = "var(--timer-fill)";
+    },
+
+    showPopup: function(text, color) {
+        const pop = document.createElement('div');
+        pop.className = 'dmg-popup';
+        pop.innerText = text;
+        pop.style.color = color;
+        pop.style.left = '50%';
+        pop.style.top = '40%';
+        document.getElementById('world-layer').appendChild(pop);
+        setTimeout(() => pop.remove(), 1000);
+    },
+
+    shakeScreen: function() {
+        const el = document.getElementById('game-container');
+        el.style.transform = "translate(5px, 5px)";
+        setTimeout(() => el.style.transform = "translate(-5px, -5px)", 50);
+        setTimeout(() => el.style.transform = "translate(5px, -5px)", 100);
+        setTimeout(() => el.style.transform = "translate(0, 0)", 150);
+    },
+
+    animateHeroAttack: function() {
+        this.ui.hero.style.left = '60%';
+        setTimeout(() => this.ui.hero.style.left = '20%', 200);
+    },
+
+    gameOver: function() {
+        SFX.lose();
+        document.getElementById('result-title').innerText = "DEFEAT";
+        document.getElementById('result-msg').innerText = `Fell at Level ${this.level}`;
+        this.switchScreen('result');
+    },
+
+    gameWin: function() {
+        SFX.win();
+        document.getElementById('result-title').innerText = "CHAMPION!";
+        document.getElementById('result-msg').innerText = "You have conquered the 5 Levels!";
+        this.switchScreen('result');
+    },
+
+    switchScreen: function(screenName) {
+        Object.values(this.ui).forEach(el => {
+            if (el && el.classList && el.classList.contains('screen')) el.classList.add('hidden');
+        });
+        if (this.ui[screenName]) this.ui[screenName].classList.remove('hidden');
+    }
+};
+
+window.onload = () => Game.init();
+
+</script>
+</body>
+</html>
