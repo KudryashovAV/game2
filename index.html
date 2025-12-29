@@ -62,20 +62,24 @@
         transition: opacity 0.5s ease;
       }
 
+      /* UPDATED: Container for side-by-side logos */
+      #intro-logos {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 2rem;
+      }
+
+      /* UPDATED: Removed absolute positioning, adjusted size */
       #intro-logo-1 {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        max-width: 80%;
-        max-height: 50vh;
-        z-index: 101;
+        max-width: 40%;
+        max-height: 30vh;
       }
 
       #intro-logo-2 {
-        max-width: 60%;
+        max-width: 40%;
         max-height: 30vh;
-        margin-bottom: 2rem;
       }
 
       #intro-title {
@@ -610,8 +614,11 @@
   <body>
     <!-- Intro Screen -->
     <div id="screen-intro" class="screen">
-      <img id="intro-logo-1" src="logo_1.png" alt="Logo 1" class="intro-element" />
-      <img id="intro-logo-2" src="logo_2.png" alt="Logo 2" class="intro-element" />
+      <!-- UPDATED: Logos side by side in container -->
+      <div id="intro-logos">
+        <img id="intro-logo-1" src="logo_1.png" alt="Logo 1" class="intro-element" />
+        <img id="intro-logo-2" src="logo_2.png" alt="Logo 2" class="intro-element" />
+      </div>
       <h1 id="intro-title" class="intro-element">MEMORY COMBAT</h1>
       <button id="intro-btn" class="intro-element" onclick="Game.goToHandSelection()">Start</button>
     </div>
@@ -708,6 +715,7 @@
 
           this.bgMusic = new Audio("sound_1.mp3");
           this.bgMusic.loop = true;
+          this.bgMusic.volume = 0.2; // Volume reduced by 80%
 
           this.flipSound = new Audio("sound_2.mp3");
         },
@@ -839,6 +847,7 @@
           SFX.init();
         },
 
+        // UPDATED: runIntro sequence
         runIntro: function () {
           const logo1 = document.getElementById("intro-logo-1");
           const logo2 = document.getElementById("intro-logo-2");
@@ -850,30 +859,23 @@
             // Step 2: Fade in Logo 1
             logo1.style.opacity = 1;
 
-            // Wait for appearance (0.5s transition) + 0.3s
+            // Step 3: Wait 0.5s (transition) + 0.2s pause = 0.7s total from last step
             setTimeout(() => {
-              // Step 3: Fade out Logo 1 (0.1s)
-              logo1.style.transition = "opacity 0.1s";
-              logo1.style.opacity = 0;
+              // Fade in Logo 2
+              logo2.style.opacity = 1;
 
-              // Wait 0.1s (fade out) + 0.2s
+              // Step 5: Wait 0.5s (transition) + 0.3s pause = 0.8s total from last step
               setTimeout(() => {
-                // Step 4: Fade in Logo 2
-                logo2.style.opacity = 1;
+                // Fade in Title
+                title.style.opacity = 1;
 
-                // Wait appearance (0.5s) + 0.3s
+                // Step 6: Wait 0.5s (transition) + 0.3s pause = 0.8s total from last step
                 setTimeout(() => {
-                  // Step 5: Fade in Title
-                  title.style.opacity = 1;
-
-                  // Wait appearance (0.5s) + 0.3s
-                  setTimeout(() => {
-                    // Step 6: Fade in Button
-                    btn.style.opacity = 1;
-                  }, 800);
+                  // Fade in Button
+                  btn.style.opacity = 1;
                 }, 800);
-              }, 300);
-            }, 800);
+              }, 800);
+            }, 700);
           }, 300);
         },
 
