@@ -131,16 +131,22 @@
         cursor: pointer;
         text-align: center;
         position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
 
       .select-card.selected {
         border-color: var(--accent);
         background: #2a2a4e;
       }
+      /* UPDATED: Icon style for image */
       .select-card .icon {
-        font-size: 2rem;
+        width: 50px;
+        height: 50px;
         display: block;
         margin-bottom: 0.5rem;
+        object-fit: contain;
       }
       .select-card .type-tag {
         font-size: 0.7rem;
@@ -406,8 +412,9 @@
         cursor: pointer;
         position: relative;
         /* FIXED PIXEL SIZES RESTORED */
-        width: 127px;
-        height: 180px;
+        /* UPDATED: New smaller size */
+        width: 102px;
+        height: 144px;
         justify-self: center;
         align-self: center;
       }
@@ -466,6 +473,14 @@
         transform: rotateY(180deg);
         font-size: 3rem;
         flex-direction: column;
+      }
+
+      /* UPDATED: Card icon image style */
+      .card-front .card-icon {
+        width: 60%;
+        height: 60%;
+        object-fit: contain;
+        margin-bottom: 5px;
       }
 
       .card-front span {
@@ -651,15 +666,15 @@
        * Types: 'attack', 'defense', 'heal'
        */
       const CARD_TYPES = {
-        sword: { id: "sword", icon: "⚔️", name: "Sword", color: "#ff4757", type: "attack" },
-        shield: { id: "shield", icon: "🛡️", name: "Shield", color: "#2ed573", type: "defense" },
-        potion: { id: "potion", icon: "❤️", name: "Potion", color: "#ff7f50", type: "heal" },
-        fire: { id: "fire", icon: "🔥", name: "Fire", color: "#ffa502", type: "attack" },
-        ice: { id: "ice", icon: "❄️", name: "Freeze", color: "#70a1ff", type: "defense" },
-        lightning: { id: "lightning", icon: "⚡", name: "Bolt", color: "#ffd700", type: "attack" },
-        poison: { id: "poison", icon: "☠️", name: "Venom", color: "#a55eea", type: "attack" },
+        sword: { id: "sword", icon: "icon_1.png", name: "Sword", color: "#ff4757", type: "attack" },
+        shield: { id: "shield", icon: "icon_2.png", name: "Shield", color: "#2ed573", type: "defense" },
+        potion: { id: "potion", icon: "icon_3.png", name: "Potion", color: "#ff7f50", type: "heal" },
+        fire: { id: "fire", icon: "icon_4.png", name: "Fire", color: "#ffa502", type: "attack" },
+        ice: { id: "ice", icon: "icon_5.png", name: "Freeze", color: "#70a1ff", type: "defense" },
+        lightning: { id: "lightning", icon: "icon_6.png", name: "Bolt", color: "#ffd700", type: "attack" },
+        poison: { id: "poison", icon: "icon_7.png", name: "Venom", color: "#a55eea", type: "attack" },
         // Empty type definition for the grid
-        empty: { id: "empty", icon: "🚫", name: "Void", color: "#666", type: "none" },
+        empty: { id: "empty", icon: "icon_8.png", name: "Void", color: "#666", type: "none" },
       };
 
       const MONSTER_TEMPLATES = [
@@ -778,7 +793,7 @@
               div.innerHTML = `<span class="new-badge">NEW!</span>`;
             }
             div.innerHTML += `
-                <span class="icon">${data.icon}</span>
+                <img src="${data.icon}" class="icon" alt="${data.name}">
                 <span>${data.name}</span>
                 <span class="type-tag">${data.type}</span>
             `;
@@ -968,24 +983,24 @@
           let color = "#fff";
           let title = "";
           let task = "";
-          let icon = "";
+          let iconHtml = "";
 
           if (phaseType === "defense") {
             title = "MONSTER ATTACKS!";
             task = "Find DEFENSE";
             color = "#e94560";
-            icon = "🛡️";
+            iconHtml = '<img src="icon_2.png" style="width:1.5rem;vertical-align:middle">';
             SFX.attack();
           } else {
             title = "YOUR TURN!";
             task = "Find ATTACK";
             color = "#2ed573";
-            icon = "⚔️";
+            iconHtml = '<img src="icon_1.png" style="width:1.5rem;vertical-align:middle">';
           }
 
           this.ui.phaseInd.innerHTML = `
             <span class="title" style="color:${color}">${title}</span>
-            <span class="task">${task} <span style="font-size:1.5rem">${icon}</span></span>
+            <span class="task">${task} ${iconHtml}</span>
         `;
 
           // UPDATED: Make sure grid is visible
@@ -1048,7 +1063,8 @@
             el.innerHTML = `
                 <div class="card-inner">
                     <div class="card-front" style="color:${cardData.color}">
-                        ${cardData.icon}<span>${cardData.name}</span>
+                        <img src="${cardData.icon}" class="card-icon" alt="${cardData.name}">
+                        <span>${cardData.name}</span>
                     </div>
                     <div class="card-back">?</div>
                 </div>
