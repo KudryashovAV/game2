@@ -694,8 +694,17 @@
 
     <!-- Result Screen -->
     <div id="screen-result" class="screen hidden">
+      <!-- UPDATED: Result Image Element -->
+      <img
+        id="result-img"
+        class="intro-element"
+        src=""
+        alt="Result"
+        style="display: none; max-width: 60%; margin-bottom: 20px"
+      />
       <h1 id="result-title">Victory!</h1>
-      <p id="result-msg">You found a new card.</p>
+      <!-- UPDATED: Added pre-line for newlines -->
+      <p id="result-msg" style="white-space: pre-line; text-align: center">You found a new card.</p>
       <button onclick="location.reload()">Restart Game</button>
     </div>
 
@@ -715,7 +724,7 @@
 
           this.bgMusic = new Audio("sound_1.mp3");
           this.bgMusic.loop = true;
-          this.bgMusic.volume = 0.2; // Volume reduced by 80%
+          this.bgMusic.volume = 0.1; // Volume reduced by 80%
 
           this.flipSound = new Audio("sound_2.mp3");
         },
@@ -1400,15 +1409,36 @@
 
         gameOver: function () {
           SFX.lose();
-          document.getElementById("result-title").innerText = "DEFEAT";
+          // Reset specific win styles
+          const img = document.getElementById("result-img");
+          if (img) img.style.display = "none";
+
+          const title = document.getElementById("result-title");
+          title.style.display = "block";
+          title.innerText = "DEFEAT";
+
           document.getElementById("result-msg").innerText = `Fell at Level ${this.level}`;
           this.switchScreen("result");
         },
 
+        // UPDATED: gameWin with new image logic
         gameWin: function () {
           SFX.win();
-          document.getElementById("result-title").innerText = "CHAMPION!";
-          document.getElementById("result-msg").innerText = "You have conquered the 5 Levels!";
+
+          // Show image
+          const img = document.getElementById("result-img");
+          if (img) {
+            img.src = "final.png";
+            img.style.display = "block";
+          }
+
+          // Hide Default Title
+          const title = document.getElementById("result-title");
+          title.style.display = "none";
+
+          // Set New Text
+          document.getElementById("result-msg").innerText = "Now you are FREE!\nOur congratulations!";
+
           this.switchScreen("result");
         },
 
